@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
+import { useToast } from '../../context/ToastContext';
 import Spinner from '../ui/Spinner';
 
 export default function InsightPanel({ reportId }) {
+  const { toast } = useToast();
   const [insight, setInsight] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,8 +15,10 @@ export default function InsightPanel({ reportId }) {
     try {
       const res = await api.generateInsight(reportId);
       setInsight(res.data);
+      toast('Health insight generated', 'success');
     } catch (e) {
       setError(e.message);
+      toast(e.message, 'error');
     } finally {
       setLoading(false);
     }

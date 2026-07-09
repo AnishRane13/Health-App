@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import Pagination from '../../components/ui/Pagination';
-import Spinner from '../../components/ui/Spinner';
+import EmptyState from '../../components/ui/EmptyState';
+import { DataTableSkeleton } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 
 export default function AdminUsers() {
@@ -13,7 +14,6 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
   const [healthCondition, setHealthCondition] = useState('');
-
   const [filters, setFilters] = useState({ search: '', city: '', healthCondition: '' });
 
   useEffect(() => {
@@ -32,6 +32,8 @@ export default function AdminUsers() {
     setPage(1);
     setFilters({ search, city, healthCondition });
   };
+
+  const hasFilters = filters.search || filters.city || filters.healthCondition;
 
   return (
     <AppShell variant="admin">
@@ -63,12 +65,40 @@ export default function AdminUsers() {
             onChange={(e) => setHealthCondition(e.target.value)}
           />
         </label>
-        <button type="submit" className="btn btn--primary">Apply filters</button>
+        <div className="filter-bar__action">
+          <button type="submit" className="btn btn--primary">Apply filters</button>
+        </div>
       </form>
 
       <section className="panel">
         {loading ? (
-          <div className="page-loader"><Spinner /></div>
+          <DataTableSkeleton rows={8} />
+        ) : users.length === 0 ? (
+          <EmptyState
+            title={hasFilters ? 'No patients match your filters' : 'No patients found'}
+            description={
+              hasFilters
+                ? 'Try broadening your search — check spelling or remove a filter.'
+                : 'Patient records will appear here once imported.'
+            }
+            action={
+              hasFilters ? (
+                <button
+                  type="button"
+                  className="btn btn--outline btn--sm"
+                  onClick={() => {
+                    setSearch('');
+                    setCity('');
+                    setHealthCondition('');
+                    setFilters({ search: '', city: '', healthCondition: '' });
+                    setPage(1);
+                  }}
+                >
+                  Clear filters
+                </button>
+              ) : null
+            }
+          />
         ) : (
           <>
             <div className="table-wrap">

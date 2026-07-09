@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import ReportTable from '../../components/health/ReportTable';
 import Pagination from '../../components/ui/Pagination';
-import Spinner from '../../components/ui/Spinner';
+import EmptyState from '../../components/ui/EmptyState';
+import { TableSkeleton } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 
 export default function UserReports() {
@@ -31,15 +32,16 @@ export default function UserReports() {
 
       <section className="panel">
         {loading ? (
-          <div className="page-loader"><Spinner /></div>
+          <TableSkeleton rows={6} />
+        ) : reports.length === 0 ? (
+          <EmptyState
+            title="No reports on file"
+            description="Your lab history will show up here after your care team imports results."
+          />
         ) : (
           <>
             <ReportTable reports={reports} />
-            <Pagination
-              page={page}
-              totalPages={pagination.totalPages}
-              onPageChange={setPage}
-            />
+            <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
           </>
         )}
       </section>

@@ -30,7 +30,9 @@ app.use(
   cors({
     origin(origin, cb) {
       if (!origin || allowedOrigins.has(origin)) return cb(null, true);
-      return cb(new Error(`Origin not allowed by CORS: ${origin}`));
+      // Reject quietly — throwing here causes a 500 on OPTIONS preflight.
+      console.warn(`[cors] blocked origin: ${origin}`);
+      return cb(null, false);
     },
     credentials: true,
   })

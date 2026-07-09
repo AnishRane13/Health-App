@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import Spinner from '../../components/ui/Spinner';
+import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
 
 export default function AdminUpload() {
+  const { toast } = useToast();
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -20,8 +22,13 @@ export default function AdminUpload() {
       const res = await api.uploadCsv(file);
       setResult(res.data);
       setFile(null);
+      toast(
+        `Import ${res.data.status.toLowerCase()}: ${res.data.inserted} rows added`,
+        res.data.status === 'FAILED' ? 'error' : 'success'
+      );
     } catch (err) {
       setError(err.message);
+      toast(err.message, 'error');
     } finally {
       setLoading(false);
     }

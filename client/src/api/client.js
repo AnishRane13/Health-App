@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Strip trailing slash so VITE_API_URL=https://api.example.com/ doesn't produce //api/...
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 class ApiClient {
   constructor() {

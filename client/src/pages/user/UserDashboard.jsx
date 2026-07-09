@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
+import WellnessScore from '../../components/health/WellnessScore';
 import MetricGrid from '../../components/health/MetricGrid';
 import TrendChart from '../../components/health/TrendChart';
 import InsightPanel from '../../components/health/InsightPanel';
-import Spinner from '../../components/ui/Spinner';
+import AlertBanner from '../../components/ui/AlertBanner';
+import { DashboardSkeleton } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -24,16 +28,8 @@ export default function UserDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <AppShell variant="user">
-        <div className="page-loader"><Spinner size="lg" /></div>
-      </AppShell>
-    );
-  }
-
-  const report = latest?.report;
   const greeting = profile?.fullName?.split(' ')[0] || user?.fullName?.split(' ')[0] || 'there';
+  const report = latest?.report;
 
   return (
     <AppShell variant="user">
@@ -45,8 +41,19 @@ export default function UserDashboard() {
         </p>
       </div>
 
-      {report ? (
+      {loading ? (
+        <DashboardSkeleton />
+      ) : report ? (
         <>
+          {latest.abnormalCount > 0 && (
+            <AlertBanner variant={latest.flags?.some((f) => f.status === 'CRITICAL') ? 'critical' : 'warn'}>
+              {latest.abnormalCount} metric{latest.abnormalCount > 1 ? 's' : ''} in your latest report need
+              attention — review below or ask your care team.
+            </AlertBanner>
+          )}
+
+          <WellnessScore flags={latest.flags} />
+
           <section className="panel highlight-panel">
             <div className="highlight-panel__meta">
               <span className="highlight-panel__eyebrow">Latest report</span>
@@ -58,13 +65,6 @@ export default function UserDashboard() {
                 })}
               </time>
             </div>
-            {latest.abnormalCount > 0 ? (
-              <p className="highlight-panel__alert">
-                {latest.abnormalCount} metric{latest.abnormalCount > 1 ? 's' : ''} outside normal range
-              </p>
-            ) : (
-              <p className="highlight-panel__ok">All measured values within reference ranges</p>
-            )}
             {report.doctorNotes && (
               <blockquote className="highlight-panel__note">&ldquo;{report.doctorNotes}&rdquo;</blockquote>
             )}
@@ -84,8 +84,11 @@ export default function UserDashboard() {
           <InsightPanel reportId={report.reportId} />
         </>
       ) : (
-        <section className="panel empty-panel">
-          <p>No health reports on file yet. Check back after your next lab visit.</p>
+        <section className="panel">
+          <EmptyState
+            title="No reports yet"
+            description="Once your lab results are imported, you'll see your wellness score, trends, and insights here."
+          />
         </section>
       )}
     </AppShell>

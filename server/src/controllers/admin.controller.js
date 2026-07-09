@@ -180,16 +180,50 @@ const getStats = asyncHandler(async (req, res) => {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [totalClients, totalReports, reportsThisMonth, recentUploads] = await Promise.all([
-    prisma.client.count(),
-    prisma.healthReport.count(),
-    prisma.healthReport.count({ where: { reportDate: { gte: startOfMonth } } }),
-    prisma.csvUploadLog.count(),
-  ]);
+  const [totalClients, totalReports, reportsThisMonth, recentUploads, ranges, latestRows] =
+    await Promise.all([
+      prisma.client.count(),
+      prisma.healthReport.count(),
+      prisma.healthReport.count({ where: { reportDate: { gte: startOfMonth } } }),
+      prisma.csvUploadLog.count(),
+      prisma.healthMetricRange.findMany(),
+      prisma.$queryRaw`
+        SELECT DISTINCT ON (client_id)
+          report_id, client_id, report_date,
+          hemoglobin, vitamin_d, cholesterol,
+          blood_sugar_fasting, creatinine, bmi
+        FROM health_reports
+        ORDER BY client_id, report_date DESC
+      `,
+    ]);
+
+  let patientsFlagged = 0;
+  let patientsCritical = 0;
+
+  for (const row of latestRows) {
+    const report = {
+      hemoglobin: row.hemoglobin,
+      vitaminD: row.vitamin_d,
+      cholesterol: row.cholesterol,
+      bloodSugarFasting: row.blood_sugar_fasting,
+      creatinine: row.creatinine,
+      bmi: row.bmi,
+    };
+    const { abnormalCount, flags } = evaluateReport(report, ranges);
+    if (abnormalCount > 0) patientsFlagged += 1;
+    if (flags.some((f) => f.status === 'CRITICAL')) patientsCritical += 1;
+  }
 
   res.json({
     success: true,
-    data: { totalClients, totalReports, reportsThisMonth, totalUploads: recentUploads },
+    data: {
+      totalClients,
+      totalReports,
+      reportsThisMonth,
+      totalUploads: recentUploads,
+      patientsFlagged,
+      patientsCritical,
+    },
   });
 });
 

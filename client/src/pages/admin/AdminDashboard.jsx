@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
-import Spinner from '../../components/ui/Spinner';
+import AlertBanner from '../../components/ui/AlertBanner';
+import { StatGridSkeleton, TableSkeleton } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 
 function StatCard({ label, value, hint }) {
@@ -36,14 +37,33 @@ export default function AdminDashboard() {
       </div>
 
       {loading ? (
-        <div className="page-loader"><Spinner size="lg" /></div>
+        <>
+          <StatGridSkeleton />
+          <TableSkeleton rows={4} />
+        </>
       ) : (
         <>
+          {(stats?.patientsFlagged > 0 || stats?.patientsCritical > 0) && (
+            <AlertBanner
+              variant={stats.patientsCritical > 0 ? 'critical' : 'warn'}
+              action={
+                <Link to="/admin/users" className="alert-banner__link">
+                  Review patients →
+                </Link>
+              }
+            >
+              {stats.patientsCritical > 0 && (
+                <><strong>{stats.patientsCritical}</strong> patient{stats.patientsCritical > 1 ? 's have' : ' has'} critical flags · </>
+              )}
+              <strong>{stats.patientsFlagged}</strong> patient{stats.patientsFlagged > 1 ? 's' : ''} with metrics outside range on their latest report
+            </AlertBanner>
+          )}
+
           <div className="stat-grid">
             <StatCard label="Registered patients" value={stats?.totalClients} />
             <StatCard label="Total lab reports" value={stats?.totalReports} />
             <StatCard label="Reports this month" value={stats?.reportsThisMonth} />
-            <StatCard label="CSV imports" value={stats?.totalUploads} />
+            <StatCard label="Patients flagged" value={stats?.patientsFlagged} hint="Latest report abnormal" />
           </div>
 
           <div className="admin-actions">
@@ -57,7 +77,7 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          {uploads.length > 0 && (
+          {uploads.length > 0 ? (
             <section className="panel">
               <h2 className="panel__title">Recent imports</h2>
               <div className="table-wrap">
@@ -89,7 +109,7 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </section>
-          )}
+          ) : null}
         </>
       )}
     </AppShell>
