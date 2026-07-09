@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { parseHealthReportsCsv } = require('../utils/ingest');
 const { evaluateReport } = require('../utils/healthFlags');
+const { insertManyBatched } = require('../utils/batchInsert');
 
 /**
  * Paginated, filterable list of clients. Search hits the indexed columns
@@ -131,11 +132,7 @@ const uploadReportsCsv = asyncHandler(async (req, res) => {
 
   let inserted = 0;
   if (validRows.length > 0) {
-    const result = await prisma.healthReport.createMany({
-      data: validRows,
-      skipDuplicates: true,
-    });
-    inserted = result.count;
+    inserted = await insertManyBatched(prisma, 'healthReport', validRows, 1000);
   }
 
   const totalRows = rows.length + errors.length;

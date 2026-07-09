@@ -74,6 +74,12 @@ export default function AdminUpload() {
             <button type="submit" className="btn btn--primary" disabled={!file || loading}>
               {loading ? <Spinner size="sm" /> : 'Upload and import'}
             </button>
+            {loading && (
+              <p className="upload-panel__status">
+                Processing CSV — large files (~25k rows) can take 1–3 minutes on the free tier.
+                Please keep this tab open.
+              </p>
+            )}
           </div>
         </form>
 
