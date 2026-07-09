@@ -1,0 +1,27 @@
+# Render Blueprint for the Health-App backend.
+# Deploy: Render Dashboard -> New -> Blueprint -> select this repo.
+# The database itself lives on Neon; only DATABASE_URL is wired in here.
+services:
+  - type: web
+    name: health-app-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Set these in the Render dashboard (marked sync:false so they are not
+      # committed or auto-generated):
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
