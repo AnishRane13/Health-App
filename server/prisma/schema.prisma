@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth & RBAC ───────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         Role      @default(USER)
+  clientId     Int?      @unique @map("client_id")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  client         Client?        @relation(fields: [clientId], references: [clientId], onDelete: SetNull)
+  csvUploads     CsvUploadLog[]
+  healthInsights HealthInsight[]
+
+  @@index([role])
+  @@map("users")
+}
+
+// ─── Core dataset: clients sheet (~5,000 rows) ─────────────────────────────
+
+model Client {
+  clientId        Int      @id @map("client_id")
+  fullName        String   @map("full_name")
+  email           String   @unique
+  mobile          String?
+  city            String?
+  state           String?
+  age             Int?
+  gender          String?
+  occupation      String?
+  healthCondition String?  @map("health_condition")
+  beautyGoal      String?  @map("beauty_goal")
+  createdAt       DateTime @map("created_at") @db.Date
+
+  user           User?
+  healthReports  HealthReport[]
+  healthInsights HealthInsight[]
+
+  // Admin search & filter indexes
+  @@index([fullName])
+  @@index([city])
+  @@index([state])
+  @@index([healthCondition])
+  @@index([gender])
+  @@index([beautyGoal])
+  @@index([createdAt])
+  @@map("clients")
+}
+
+// ─── Core dataset: health_reports sheet (~24,882 rows) ───────────────────
+
+model HealthReport {
+  reportId          String   @id @map("report_id")
+  clientId          Int      @map("client_id")
+  reportDate        DateTime @map("report_date") @db.Date
+  hemoglobin        Float?
+  vitaminD          Int?     @map("vitamin_d")
+  cholesterol       Int?
+  bloodSugarFasting Int?     @map("blood_sugar_fasting")
+  creatinine        Float?
+  urineProtein      String?  @map("urine_protein")
+  bmi               Float?
+  doctorNotes       String?  @map("doctor_notes")
+
+  client Client @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  healthInsights HealthInsight[]
+
+  // Latest report + history + trend charts
+  @@index([clientId])
+  @@index([reportDate])
+  @@index([clientId, reportDate(sort: Desc)])
+  @@map("health_reports")
+}
+
+// ─── Creative: AI health insights (differentiator) ─────────────────────────
+// Powers "What does this mean?" on user dashboard + insight history
+
+enum InsightType {
+  REPORT_SUMMARY
+  TREND_ANALYSIS
+  WELLNESS_TIP
+}
+
+model HealthInsight {
+  id             Int         @id @default(autoincrement())
+  clientId       Int         @map("client_id")
+  reportId       String?     @map("report_id")
+  generatedById  Int?        @map("generated_by_id")
+  type           InsightType @default(REPORT_SUMMARY)
+  title          String?
+  content        String      @db.Text
+  metricsContext Json?       @map("metrics_context")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  client      Client        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  report      HealthReport? @relation(fields: [reportId], references: [reportId], onDelete: SetNull)
+  generatedBy User?         @relation(fields: [generatedById], references: [id], onDelete: SetNull)
+
+  @@index([clientId, createdAt(sort: Desc)])
+  @@map("health_insights")
+}
+
+// ─── Creative: reference ranges for flagging abnormal metrics ──────────────
+// Powers color-coded dashboard cards + admin "flagged results" count
+
+enum MetricStatus {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+model HealthMetricRange {
+  id         Int     @id @default(autoincrement())
+  metricKey  String  @unique @map("metric_key")
+  label      String
+  unit       String?
+  minNormal  Float?  @map("min_normal")
+  maxNormal  Float?  @map("max_normal")
+  minCritical Float? @map("min_critical")
+  maxCritical Float? @map("max_critical")
+  category   String?
+
+  @@map("health_metric_ranges")
+}
+
+// ─── Creative: CSV upload audit trail ──────────────────────────────────────
+// Powers admin accountability + upload history in admin portal
+
+enum UploadStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+model CsvUploadLog {
+  id            Int          @id @default(autoincrement())
+  uploadedById  Int          @map("uploaded_by_id")
+  filename      String
+  totalRows     Int          @default(0) @map("total_rows")
+  insertedRows  Int          @default(0) @map("inserted_rows")
+  skippedRows   Int          @default(0) @map("skipped_rows")
+  errorDetails  Json?        @map("error_details")
+  status        UploadStatus @default(SUCCESS)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([uploadedById])
+  @@index([createdAt(sort: Desc)])
+  @@map("csv_upload_logs")
+}
