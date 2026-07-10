@@ -33,7 +33,18 @@ Any seeded client email (`user1@example.com` through `user5000@example.com`) wor
 | AI | Anthropic Claude API for health insight generation (optional — falls back to rule-based summaries if no API key is set) |
 | Deployment | Vercel (frontend), Render (backend), Neon (database) |
 
-## Features
+### AI Insights (Anthropic API)
+
+The **Explain my results** feature works out of the box without an API key. When `ANTHROPIC_API_KEY` is not set (as in the current live deployment), the backend automatically uses a **rule-based summary** built from your flagged lab metrics — so reviewers can test the full patient flow without any extra setup.
+
+To enable **AI-generated insights** via Anthropic Claude, add a valid key to `server/.env` locally or to the Render environment variables:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Once a working key is in place and the server is restarted, the same **Explain my results** button will call the Anthropic API instead of the rule-based fallback. No frontend or code changes are required.
+
 
 ### Patient Portal (`/dashboard`, `/reports`)
 
@@ -109,7 +120,7 @@ DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
 JWT_SECRET=your-long-random-secret
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
-ANTHROPIC_API_KEY=          # optional — omit to use rule-based insights
+ANTHROPIC_API_KEY=          # optional — leave empty for rule-based insights; add a valid key for AI
 PORT=5000
 NODE_ENV=development
 ```
